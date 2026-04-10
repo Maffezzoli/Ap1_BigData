@@ -1,0 +1,10 @@
+ChaveSecreta.pem
+ChaveSecreta.ppk
+tutorial.md
+
+# Terraform local artifacts and secrets
+catalogo-produtos/infra/terraform/rds/.terraform/
+catalogo-produtos/infra/terraform/rds/.terraform.lock.hcl
+catalogo-produtos/infra/terraform/rds/*.tfstate
+catalogo-produtos/infra/terraform/rds/*.tfstate.*
+catalogo-produtos/infra/terraform/rds/terraform.tfvars
