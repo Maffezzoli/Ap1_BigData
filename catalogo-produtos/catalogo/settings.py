@@ -54,30 +54,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'catalogo.wsgi.application'
 
-# Configuração do banco de dados
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-USE_RDS = os.getenv('USE_RDS', 'False') == 'True'
-
-if USE_RDS and os.getenv('RDS_HOSTNAME'):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('RDS_DB_NAME', 'catalogodb'),
-            'USER': os.getenv('RDS_USERNAME', 'catalogo_admin'),
-            'PASSWORD': os.getenv('RDS_PASSWORD', ''),
-            'HOST': os.getenv('RDS_HOSTNAME', ''),
-            'PORT': os.getenv('RDS_PORT', '5432'),
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {

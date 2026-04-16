@@ -1,10 +1,56 @@
+# Chaves privadas AWS
 ChaveSecreta.pem
 ChaveSecreta.ppk
+
+# Tutorial
 tutorial.md
 
-# Terraform local artifacts and secrets
-catalogo-produtos/infra/terraform/rds/.terraform/
-catalogo-produtos/infra/terraform/rds/.terraform.lock.hcl
-catalogo-produtos/infra/terraform/rds/*.tfstate
-catalogo-produtos/infra/terraform/rds/*.tfstate.*
-catalogo-produtos/infra/terraform/rds/terraform.tfvars
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/
+*.pot
+local_settings.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+
+# Elastic Beanstalk
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
+
+# Deployment
+*.zip
+app.zip
+Projeto_Ap1.zip
