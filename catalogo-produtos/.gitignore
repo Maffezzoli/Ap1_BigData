@@ -1,11 +1,4 @@
-# Chaves privadas AWS
-ChaveSecreta.pem
-ChaveSecreta.ppk
-
-# Tutorial
-tutorial.md
-
-# Python
+# Python e Django
 __pycache__/
 *.py[cod]
 *$py.class
@@ -14,50 +7,39 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-
-# Virtual Environment
 .venv/
 venv/
 ENV/
 env/
-
-# Django
 *.log
 db.sqlite3
 db.sqlite3-journal
-/staticfiles/
-/media/
-*.pot
+staticfiles/
+media/
 local_settings.py
+.env
+.env.local
 
-# IDE
+# IDEs e OS
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
-
-# Environment variables
-.env
-.env.local
 
 # Elastic Beanstalk
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
 
-# Deployment
+# Pacotes de Deploy
 *.zip
 app.zip
-Projeto_Ap1.zip
 
 # Terraform
 .terraform/
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
-instrucoes.md

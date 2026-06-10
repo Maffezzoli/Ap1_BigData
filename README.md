@@ -1,6 +1,6 @@
-# Catalogo de Produtos - Django REST API
+# Catalogo de Produtos - Django REST API (Evolução AP2)
 
-API REST desenvolvida com Django e Django REST Framework para gerenciamento de produtos e categorias, com deploy na AWS Elastic Beanstalk.
+API REST desenvolvida com Django e Django REST Framework para gerenciamento de produtos, categorias e pedidos (carrinho de compras), integrada com AWS RDS PostgreSQL e AWS S3, pronta para deploy na AWS Elastic Beanstalk.
 
 ## Integrantes do Grupo
 
@@ -8,413 +8,207 @@ API REST desenvolvida com Django e Django REST Framework para gerenciamento de p
 
 ## Link da API Deployada
 
-**URL da API na AWS:** http://catalogo-produtos-env.eba-z8mu8yce.us-east-2.elasticbeanstalk.com/
+**URL da API na AWS:** http://catalogo-produtos-env.eba-z8mu8yce.us-east-2.elasticbeanstalk.com/ 
 
-Endpoints disponiveis:
-- `GET /api/categorias/` - Lista todas as categorias
-- `POST /api/categorias/` - Cria nova categoria
-- `GET /api/categorias/{id}/` - Detalhes de uma categoria
-- `PUT /api/categorias/{id}/` - Atualiza categoria
-- `DELETE /api/categorias/{id}/` - Remove categoria
-- `GET /api/produtos/` - Lista todos os produtos
-- `POST /api/produtos/` - Cria novo produto
-- `GET /api/produtos/{id}/` - Detalhes de um produto
-- `PUT /api/produtos/{id}/` - Atualiza produto
-- `DELETE /api/produtos/{id}/` - Remove produto
-- `GET /admin/` - Interface administrativa Django
+### Endpoints Disponíveis
 
-## Descricao do Projeto
+*   `GET /api/categorias/` - Lista todas as categorias
+*   `POST /api/categorias/` - Cria nova categoria
+*   `GET /api/categorias/{id}/` - Detalhes de uma categoria
+*   `PUT /api/categorias/{id}/` - Atualiza categoria
+*   `DELETE /api/categorias/{id}/` - Remove categoria
+*   `GET /api/produtos/` - Lista todos os produtos (suporta filtros avançados de JSONB)
+*   `POST /api/produtos/` - Cria novo produto (com upload de imagem para o S3)
+*   `GET /api/produtos/{id}/` - Detalhes de um produto
+*   `PUT /api/produtos/{id}/` - Atualiza produto
+*   `DELETE /api/produtos/{id}/` - Remove produto
+*   `GET /api/pedidos/` - Lista todos os pedidos (carrinho de compras)
+*   `POST /api/pedidos/` - Cria um novo pedido com itens associados
+*   `GET /api/pedidos/{id}/` - Detalhes do pedido com seus itens e subtotal/total
+*   `PUT /api/pedidos/{id}/` - Atualiza pedido e seus itens associados
+*   `DELETE /api/pedidos/{id}/` - Remove pedido
+*   `GET /admin/` - Interface administrativa do Django
+*   `GET /` - Health check (retorna `{"status": "ok"}`)
 
-Este projeto e uma API REST para gerenciamento de catalogo de produtos, desenvolvida como parte da disciplina de Big Data. O sistema permite:
+---
 
-- **Gerenciamento de Categorias**: Criar, listar, atualizar e deletar categorias de produtos
-- **Gerenciamento de Produtos**: CRUD completo de produtos com relacionamento a categorias
-- **Interface Administrativa**: Django Admin para gerenciamento via interface web
-- **API RESTful**: Endpoints completos seguindo padroes REST
-- **Deploy na AWS**: Aplicacao deployada no Elastic Beanstalk
+## 1. Arquitetura da Solução (Evolução AP1 -> AP2)
 
-### Alteracoes Realizadas
+Na **AP1**, a aplicação era executada de forma autocontida com banco de dados relacional SQLite (`db.sqlite3`) e armazenamento de arquivos de imagem em disco local (no diretório `media/`).
 
-1. **Nova Classe Categoria**: Adicionada classe `Categoria` com os campos:
-   - `nome`: Nome unico da categoria
-   - `descricao`: Descricao opcional da categoria
-   - `data_criacao`: Data de criacao automatica
+Na **AP2**, evoluímos o projeto para uma arquitetura na nuvem de nível de produção, separando as responsabilidades de computação, dados e armazenamento de arquivos de mídia:
 
-2. **Relacionamento**: Produto agora possui relacionamento ForeignKey com Categoria (opcional)
+```mermaid
+graph TD
+    subgraph AP1 - Arquitetura Autocontida
+        A[Cliente / Browser] -->|HTTP / JSON| B[AWS Elastic Beanstalk]
+        B -->|Banco de Dados Local| C[(SQLite - db.sqlite3)]
+        B -->|Armazenamento Local| D[Disco Local - /media/]
+    end
 
-3. **APIs Completas**: Implementados serializers, views e URLs para ambas as classes
-
-4. **Configuracao Simplificada**: Removida infraestrutura Terraform, usando SQLite como banco principal
-
-## Tecnologias Utilizadas
-
-- **Python 3.12**
-- **Django 6.0.4**
-- **Django REST Framework 3.17.1**
-- **SQLite** (banco de dados)
-- **Gunicorn** (servidor WSGI)
-- **Pillow** (processamento de imagens)
-- **AWS Elastic Beanstalk** (deploy)
-
-## Estrutura do Projeto
-
-```
-catalogo-produtos/
-├── catalogo/                 # Configuracoes do projeto Django
-│   ├── settings.py          # Configuracoes principais
-│   ├── urls.py              # URLs principais
-│   └── wsgi.py              # Configuracao WSGI
-├── produtos/                 # App de produtos e categorias
-│   ├── models.py            # Modelos Categoria e Produto
-│   ├── serializers.py       # Serializers DRF
-│   ├── views.py             # ViewSets da API
-│   ├── urls.py              # URLs da API
-│   ├── admin.py             # Configuracao Django Admin
-│   └── migrations/          # Migracoes do banco
-├── .ebextensions/           # Configuracoes Elastic Beanstalk
-│   ├── django.config        # Comandos de deploy
-│   └── detection.config     # Deteccao de plataforma
-├── manage.py                # Utilitario Django
-├── requirements.txt         # Dependencias Python
-├── Procfile                 # Configuracao Gunicorn
-└── db.sqlite3              # Banco de dados SQLite
+    subgraph AP2 - Arquitetura de Produção Escalável
+        E[Cliente / Browser] -->|HTTP / JSON| F[AWS Elastic Beanstalk]
+        F -->|Conectividade Segura| G[(AWS RDS PostgreSQL)]
+        F -->|Upload de Imagens| H[AWS S3 Bucket]
+        H -.->|Servindo via URLs Pré-Assinadas| E
+    end
 ```
 
-## Como Configurar e Executar Localmente
+### Principais Mudanças:
+*   **AWS RDS (PostgreSQL)**: Substituiu o SQLite local. Garante alta disponibilidade, backups automáticos e isolamento dos dados.
+*   **AWS S3 (Simple Storage Service)**: Substituiu o armazenamento em disco local da instância EC2. Permite que as instâncias escalem horizontalmente sem perder os uploads dos usuários.
+*   **Segurança com Presigned URLs**: O S3 é mantido **100% privado** (bloqueio de acesso público ativo). O Django gera URLs pré-assinadas temporárias seguras para que o cliente acesse as imagens de mídia diretamente do S3 sem expor o bucket publicamente.
 
-### Pre-requisitos
+---
 
-- Python 3.12 ou superior
-- pip (gerenciador de pacotes Python)
-- Git
+## 2. Tecnologias Utilizadas
 
-### Passo 1: Clonar o Repositorio
+*   **Python 3.12**
+*   **Django 6.0.4**
+*   **Django REST Framework 3.17.1**
+*   **django-storages 1.14.6** & **boto3 1.43.25** (Integração com AWS S3)
+*   **psycopg2-binary 2.9.12** (Driver de conexão com PostgreSQL)
+*   **Terraform v1.14+** (Provisionamento automatizado da infraestrutura AWS)
+*   **AWS Elastic Beanstalk** (Hospedagem da API)
+*   **AWS RDS PostgreSQL 16.1** (Banco de dados de produção)
+*   **AWS S3** (Armazenamento de mídia de produtos)
 
+---
+
+## 3. Como Configurar e Executar Localmente
+
+O projeto está configurado de forma híbrida: por padrão, rodará com **SQLite** local e armazenamento **Local** de mídia, facilitando o desenvolvimento sem custo. Ao definir as variáveis de ambiente corretas, ele se conectará automaticamente ao **RDS PostgreSQL** e ao **AWS S3**.
+
+### Passo 1: Clonar o Repositório e Acessar a Pasta
 ```bash
-git clone [URL_DO_REPOSITORIO]
+git clone <URL_DO_REPOSITORIO>
 cd Ap1_BigData/catalogo-produtos
 ```
 
-### Passo 2: Criar Ambiente Virtual
-
-**Windows (PowerShell):**
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-```
-
+### Passo 2: Criar e Ativar Ambiente Virtual
 **macOS/Linux:**
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
+**Windows:**
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
 
-### Passo 3: Instalar Dependencias
-
+### Passo 3: Instalar Dependências
 ```bash
 pip install -r requirements.txt
 ```
 
-### Passo 4: Executar Migracoes
-
+### Passo 4: Rodar as Migrações
 ```bash
-python manage.py makemigrations
 python manage.py migrate
 ```
 
-### Passo 5: Criar Superusuario (Admin)
-
+### Passo 5: Inicializar Dados de Teste (Bootstrap Command - BÔNUS)
+Criamos um comando customizado para criar o usuário administrador padrão e popular o banco de dados com dados reais de produtos (incluindo metadados JSON flexíveis):
 ```bash
-python manage.py createsuperuser
+python manage.py bootstrap
 ```
+*   **Usuário criado:** `admin`
+*   **Senha criada:** `admin123`
 
-Siga as instrucoes para criar usuario, email e senha do administrador.
-
-### Passo 6: Coletar Arquivos Estaticos
-
-```bash
-python manage.py collectstatic --noinput
-```
-
-### Passo 7: Executar Servidor de Desenvolvimento
-
+### Passo 6: Iniciar o Servidor Local
 ```bash
 python manage.py runserver
 ```
-
-### Passo 8: Acessar a Aplicacao
-
-- **API Root**: http://127.0.0.1:8000/api/
-- **Categorias**: http://127.0.0.1:8000/api/categorias/
-- **Produtos**: http://127.0.0.1:8000/api/produtos/
-- **Admin**: http://127.0.0.1:8000/admin/
-
-## Deploy na AWS Elastic Beanstalk
-
-### Pre-requisitos para Deploy
-
-- Conta AWS ativa
-- AWS CLI instalado e configurado
-- EB CLI instalado (opcional, mas recomendado)
-
-### Passo 1: Preparar Arquivo app.zip
-
-Na pasta `catalogo-produtos`, criar arquivo ZIP com os seguintes arquivos:
-
-```bash
-# Incluir:
-- catalogo/
-- produtos/
-- .ebextensions/
-- manage.py
-- requirements.txt
-- Procfile
-- db.sqlite3 (opcional, para dados iniciais)
-
-# NAO incluir:
-- .venv/
-- .git/
-- __pycache__/
-- *.pyc
-- .env
-- media/ (se houver uploads locais)
-```
-
-**Comando para criar ZIP (Linux/macOS):**
-```bash
-zip -r app.zip . -x "*.git*" "*__pycache__*" "*.pyc" ".venv/*" "*.env"
-```
-
-**Windows (PowerShell):**
-```powershell
-Compress-Archive -Path * -DestinationPath app.zip -Force
-```
-
-### Passo 2: Criar Ambiente no Elastic Beanstalk
-
-1. Acesse o Console AWS
-2. Navegue para Elastic Beanstalk
-3. Clique em "Create Application"
-4. Configure:
-   - **Application name**: catalogo-produtos
-   - **Platform**: Python
-   - **Platform branch**: Python 3.12
-   - **Application code**: Upload your code
-   - Faca upload do arquivo `app.zip`
-
-### Passo 3: Configurar Variaveis de Ambiente
-
-No console do Elastic Beanstalk, va em Configuration > Software > Environment properties:
-
-```
-DJANGO_DEBUG=False
-DJANGO_ALLOWED_HOSTS=.elasticbeanstalk.com
-DJANGO_SETTINGS_MODULE=catalogo.settings
-```
-
-### Passo 4: Criar Superusuario no Ambiente de Producao
-
-Apos o deploy, conecte-se via SSH ao ambiente EB e execute:
-
-```bash
-# Conectar via SSH (usando EB CLI)
-eb ssh
-
-# Ou via console AWS > EC2 > Connect
-
-# No servidor, executar:
-cd /var/app/current
-source /var/app/venv/*/bin/activate
-python manage.py createsuperuser
-```
-
-**Alternativa: Criar via container_commands**
-
-Adicione ao arquivo `.ebextensions/django.config`:
-
-```yaml
-container_commands:
-  06_create_superuser:
-    command: "echo \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@example.com', 'senha_forte_aqui')\" | python manage.py shell"
-    leader_only: true
-```
-
-### Passo 5: Verificar Deploy
-
-1. Aguarde o ambiente ficar com status "Ok" (verde)
-2. Acesse a URL fornecida pelo Elastic Beanstalk
-3. Teste os endpoints da API
-4. Acesse `/admin/` e faca login com o superusuario criado
-
-## Comandos Uteis
-
-### Desenvolvimento Local
-
-```bash
-# Criar novas migrações
-python manage.py makemigrations
-
-# Aplicar migrações
-python manage.py migrate
-
-# Criar superusuário
-python manage.py createsuperuser
-
-# Verificar problemas no projeto
-python manage.py check
-
-# Executar testes
-python manage.py test
-
-# Shell interativo do Django
-python manage.py shell
-```
-
-### Deploy e Atualização
-
-```bash
-# Instalar EB CLI
-pip install awsebcli
-
-# Inicializar EB no projeto
-eb init
-
-# Criar ambiente
-eb create catalogo-produtos-env
-
-# Deploy de atualizações
-eb deploy
-
-# Ver logs
-eb logs
-
-# Abrir aplicação no navegador
-eb open
-
-# SSH no servidor
-eb ssh
-
-# Status do ambiente
-eb status
-```
-
-## Modelos de Dados
-
-### Categoria
-
-```python
-class Categoria(models.Model):
-    nome = CharField(max_length=100, unique=True)
-    descricao = TextField(blank=True)
-    data_criacao = DateTimeField(auto_now_add=True)
-```
-
-### Produto
-
-```python
-class Produto(models.Model):
-    nome = CharField(max_length=200)
-    descricao = TextField()
-    preco = DecimalField(max_digits=10, decimal_places=2)
-    categoria = ForeignKey(Categoria, on_delete=SET_NULL, null=True, blank=True)
-    imagem = ImageField(upload_to='produtos/', blank=True, null=True)
-    data_criacao = DateTimeField(auto_now_add=True)
-```
-
-## Seguranca
-
-- SECRET_KEY deve ser alterada em producao
-- DEBUG=False em producao
-- ALLOWED_HOSTS configurado corretamente
-- Nunca versionar credenciais ou chaves privadas
-- Usar variaveis de ambiente para dados sensiveis
-- Manter dependencias atualizadas
-
-## Documentacao das Etapas Realizadas
-
-### 1. Remocao da Infraestrutura Terraform
-- Removido diretorio `infra/terraform/` completo
-- Simplificada configuracao para usar apenas SQLite
-
-### 2. Atualizacao do settings.py
-- Removida logica condicional de banco de dados (RDS/PostgreSQL)
-- Configurado SQLite como banco principal
-- Mantidas configuracoes de seguranca e deploy
-
-### 3. Criacao da Classe Categoria
-- Implementado modelo `Categoria` em `produtos/models.py`
-- Adicionados campos: nome, descricao, data_criacao
-- Configuradas Meta options para ordenacao e verbose names
-
-### 4. Relacionamento Produto-Categoria
-- Adicionado campo ForeignKey em Produto
-- Configurado `on_delete=SET_NULL` para preservar produtos se categoria for deletada
-- Adicionado `related_name='produtos'` para acesso reverso
-
-### 5. Implementacao dos Serializers
-- Criado `CategoriaSerializer` com campo calculado `produtos_count`
-- Atualizado `ProdutoSerializer` com campo `categoria_nome` read-only
-- Configurados campos read-only apropriados
-
-### 6. Implementacao das Views
-- Criado `CategoriaViewSet` com operacoes CRUD completas
-- Mantido `ProdutoViewSet` existente
-- Ambos usando `ModelViewSet` do DRF
-
-### 7. Configuracao de URLs
-- Registrada rota `/api/categorias/` no router
-- Mantida rota `/api/produtos/` existente
-- URLs seguindo padrao RESTful
-
-### 8. Configuracao do Django Admin
-- Registradas ambas as classes no admin
-- Configurados list_display, search_fields, list_filter
-- Adicionado autocomplete para categoria em produtos
-
-### 9. Preparacao para Deploy
-- Mantidos arquivos `.ebextensions/` para configuracao EB
-- Atualizado `django.config` com comandos de migracao
-- Configurado Procfile para Gunicorn
-- Documentadas instrucoes de criacao de superusuario
-
-## Troubleshooting
-
-### Erro: "No module named 'django'"
-```bash
-# Certifique-se de que o ambiente virtual esta ativado
-source .venv/bin/activate  # Linux/macOS
-.venv\Scripts\Activate.ps1  # Windows
-
-# Reinstale as dependencias
-pip install -r requirements.txt
-```
-
-### Erro: "Database is locked"
-```bash
-# Certifique-se de que nao ha multiplas instancias rodando
-# Reinicie o servidor
-```
-
-### Erro no Deploy EB: "502 Bad Gateway"
-```bash
-# Verifique os logs
-eb logs
-
-# Comum: problemas com migracoes ou collectstatic
-# Solucao: verificar .ebextensions/django.config
-```
-
-## Referencias
-
-- [Django Documentation](https://docs.djangoproject.com/)
-- [Django REST Framework](https://www.django-rest-framework.org/)
-- [AWS Elastic Beanstalk Python](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create-deploy-python-django.html)
-- [Deploying Django to Elastic Beanstalk](https://realpython.com/deploying-a-django-app-to-aws-elastic-beanstalk/)
-
-## Licenca
-
-Este projeto foi desenvolvido para fins educacionais como parte da disciplina de Big Data.
+Acesse a API em [http://127.0.0.1:8000/api/](http://127.0.0.1:8000/api/).
 
 ---
 
-**Ultima atualizacao:** Abril 2026
+## 4. Passo a Passo de Deploy (Infraestrutura do Zero)
+
+Para evitar problemas com senhas expiradas ou segredos em texto puro, utilizamos **Terraform** para provisionar os recursos de banco e storage na AWS de forma automatizada.
+
+### Passo 1: Provisionar RDS e S3 com Terraform
+1. Certifique-se de ter credenciais AWS ativas no terminal:
+   ```bash
+   export AWS_ACCESS_KEY_ID="sua_chave_aqui"
+   export AWS_SECRET_ACCESS_KEY="seu_segredo_aqui"
+   export AWS_DEFAULT_REGION="us-east-1"
+   ```
+2. Inicialize e aplique o Terraform na pasta do projeto:
+   ```bash
+   terraform init
+   terraform apply
+   ```
+3. Digite `yes` e confirme. Ao final da execução, o Terraform exibirá no terminal os blocos de variáveis de ambiente prontos para uso. **Copie o bloco gerado em `env_variables_eb`.**
+
+### Passo 2: Configurar o Elastic Beanstalk
+1. Acesse o console do **AWS Elastic Beanstalk**.
+2. Vá em **Configuration** (Configuração) > **Updates, monitoring, and logging** (Atualizações, monitoramento e logs) > **Platform properties** (Propriedades da plataforma) / **Environment properties**.
+3. Adicione as variáveis exibidas no output do Terraform:
+   *   `DB_HOST` (Endpoint do RDS gerado)
+   *   `DB_NAME` = `catalogodb`
+   *   `DB_USER` = `postgres`
+   *   `DB_PASSWORD` (Senha segura auto-gerada pelo Terraform)
+   *   `DB_PORT` = `5432`
+   *   `AWS_STORAGE_BUCKET_NAME` (Nome do bucket S3 gerado)
+   *   `AWS_S3_REGION_NAME` = `us-east-1`
+   *   `USE_S3` = `True`
+   *   `DJANGO_SETTINGS_MODULE` = `catalogo.settings`
+   *   `DJANGO_DEBUG` = `False`
+   *   `DJANGO_ALLOWED_HOSTS` = `.elasticbeanstalk.com`
+
+### Passo 3: Gerar Pacote de Deploy (`app.zip`)
+Executar o script automatizado contido na raiz:
+```bash
+./deploy.sh
+```
+Isso gerará um arquivo `app.zip` limpo, sem diretórios de ambiente virtual (`.venv/`), base de dados local SQLite (`db.sqlite3`) ou arquivos temporários.
+
+### Passo 4: Upload e Deploy
+1. No console do Beanstalk, clique em **Upload and Deploy** (Fazer upload e implantar).
+2. Escolha o arquivo `app.zip` recém-gerado.
+3. Aguarde o ambiente concluir o deploy e ficar com o status **Ok** (Verde).
+
+### Passo 5: Rodar Migrações e Inicialização em Produção
+O arquivo `.ebextensions/django.config` já está configurado para executar `python manage.py migrate` e `collectstatic` automaticamente a cada deploy de líder.
+
+Para rodar o bootstrap inicial no RDS de produção e criar o usuário `admin` com dados mockados:
+1. Conecte-se via SSH à instância EC2 (usando `eb ssh` ou AWS Session Manager).
+2. Execute o comando:
+   ```bash
+   cd /var/app/current/
+   source /var/app/venv/*/bin/activate
+   python manage.py bootstrap
+   ```
+
+---
+
+## 5. Consultas Avançadas JSONB no PostgreSQL (BÔNUS)
+
+Implementamos um campo do tipo `JSONField` (especificacoes) no modelo `Produto` para lidar com atributos específicos de diferentes categorias (ex.: RAM, CPU, cor, capacidade, voltagem).
+
+### Como Consultar/Filtrar
+Você pode testar filtros na API passando parâmetros de query diretamente nos endpoints. O backend traduzirá em filtros `JSONB` no PostgreSQL:
+
+1.  **Filtro por Marca (Atributo JSON):**
+    `GET /api/produtos/?marca=Dell`
+2.  **Filtro por Memória RAM (Atributo JSON numérico):**
+    `GET /api/produtos/?ram_gb=16`
+3.  **Filtro por Cor (Atributo JSON):**
+    `GET /api/produtos/?cor=preto`
+4.  **Caso Combinado: Filtro Relacional + JSON (Categoria + Marca):**
+    `GET /api/produtos/?categoria=1&marca=Apple`
+
+---
+
+## 6. Documentação de Decisões Técnicas e Troubleshooting
+
+### Decisões Técnicas
+*   **Substituição do SQLite por PostgreSQL (RDS)**: O uso de banco relacional robusto no RDS garante durabilidade ACID para operações críticas de e-commerce como o gerenciamento de pedidos e itens do pedido.
+*   **S3 com Acesso Público Bloqueado + Presigned URLs**: Evita vazamento acidental de arquivos. O Django assina os links de imagens com validade temporária.
+*   **Configuração do `AWS_DEFAULT_ACL = None`**: As versões recentes da AWS desencorajam ou bloqueiam por padrão o uso de ACLs públicas em buckets S3. Definir este parâmetro evita erros de permissão `AccessDenied` ao realizar uploads de imagens na API.
+*   **Terraform para Provisionamento Automático**: Garante reprodutibilidade completa. Nenhuma credencial foi escrita em código. Toda senha é injetada dinamicamente nos outputs e configs.
+
+### Troubleshooting (Resolução de Problemas)
+*   **Erro `AccessDenied` no upload de Imagens:** Certifique-se de que a variável `AWS_DEFAULT_ACL` no `settings.py` está configurada como `None` e que a política de Object Ownership do bucket S3 está definida como default.
+*   **Banco de Dados Inacessível da Máquina Local:** O Security Group criado via Terraform permite acesso à porta 5432 de qualquer IP para facilitar testes locais. Se o seu ambiente corporativo/rede bloquear portas externas, você pode precisar fazer o deploy das variáveis de ambiente e deixar que o Beanstalk execute a migração de forma automática.
